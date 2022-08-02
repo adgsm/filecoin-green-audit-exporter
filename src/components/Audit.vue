@@ -3,10 +3,11 @@
 		<div class="main-container">
 			<div class="storage-providers-container">
 				<StorageProviders :storage-provider="storageProvider"
-					@storage-provider-changed="(sp) => {storageProvider = sp}" />
+					@storage-provider-changed="(sp) => {storageProvider = sp.id; storageProviterTimeZoneOffset = sp.tzOffset}" />
 			</div>
 			<div class="content-container">
 				<Exporter :storage-provider="storageProvider"
+					:storage-proviter-time-zone-offset="storageProviterTimeZoneOffset"
 					@loading="(l) => {loading = l}" />
 			</div>
 		</div>

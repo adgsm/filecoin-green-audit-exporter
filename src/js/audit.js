@@ -3,7 +3,7 @@ import language from '@/src/mixins/i18n/language.js'
 import ProgressSpinner from 'primevue/progressspinner'
 
 import StorageProviders from '@/src/components/storage-providers/StorageProviders.vue'
-import Exporter from '@/src/components/charts/Exporter.vue'
+import Exporter from '@/src/components/exporter/Exporter.vue'
 import Footer from '@/src/components/footer/Footer.vue'
 
 const created = function() {
@@ -56,7 +56,8 @@ export default {
 	data () {
 		return {
 			loading: false,
-			storageProvider: null
+			storageProvider: null,
+			storageProviterTimeZoneOffset: 0
 		}
 	},
 	created: created,

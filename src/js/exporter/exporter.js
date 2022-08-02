@@ -1,13 +1,12 @@
 import language from '@/src/mixins/i18n/language.js'
-
 import api from '@/src/mixins/api/api.js'
 
 import axios from 'axios'
 import moment from 'moment'
-
-import Button from 'primevue/button'
+import Papa from 'papaparse'
 
 import Datepicker from '@vuepic/vue-datepicker'
+import Button from 'primevue/button'
 
 const created = function() {
 	const that = this
@@ -32,9 +31,6 @@ const computed = {
 }
 
 const watch = {
-	async storageProvider() {
-		await this.getPowerGenerationEnergyConsumptionData()
-	}
 }
 
 const mounted = async function() {
@@ -45,28 +41,75 @@ const mounted = async function() {
 }
 
 const methods = {
-	async getPowerGenerationEnergyConsumptionData() {
-		const powerNames = 'Solar pannels'
-		const energyNames = 'Power grid plug'
-		const from = this.dates[0].toISOString()
-		const to = this.dates[1].toISOString()
+	async getSolarPannelsPower() {
+		const sources = 'Solar pannels'
+		const locatTZOffset = new Date().getTimezoneOffset()
+		const from = moment(this.dates[0]).add((-1) * locatTZOffset, 'minutes').add((-1) * this.storageProviterTimeZoneOffset, 'minutes').toISOString()
+		const to = moment(this.dates[1]).add((-1) * locatTZOffset, 'minutes').add((-1) * this.storageProviterTimeZoneOffset, 'minutes').toISOString()
 
 		this.$emit('loading', true)
 
-		const apiPowerData = await this.getChartData('power', this.storageProvider, powerNames, null, null, null, null, from, to)
-		const powerData = apiPowerData.map((s) => {
-			return [new Date(s.Time), s.Power]
-		})
+		const solarPannelsPower = await this.getData('power', this.storageProvider, sources, null, null, null, null, from, to)
 
-		const apiEnergyData = await this.getChartData('energy', this.storageProvider, energyNames, null, null, null, null, from, to)
-		const energyData = apiEnergyData.map((s) => {
-			return [new Date(s.Time), s.Energy]
-		})
+		const solarPannelsPowerHeader = ['"Name"', '"Time"', '"Power [W]"']
+		const solarPannelsPowerColumnTypes = ["string", "string", "number"]
 
+		let result = solarPannelsPowerHeader.join(",") + "\r\n" +
+			Papa.unparse(solarPannelsPower.map((spp) => {return [spp.Name, spp.Time, spp.Power]}), {
+				quotes: solarPannelsPowerColumnTypes.map((ct) => {return ct != 'number'}),
+				quoteChar: '"',
+				escapeChar: '"',
+				delimiter: ",",
+				header: false,
+				newline: "\r\n",
+				skipEmptyLines: false,
+				columns: null
+			})
 
 		this.$emit('loading', false)
+
+		const blob = new Blob([result], { type: 'text/csv' })
+		const link = document.createElement('a')
+		link.href = URL.createObjectURL(blob)
+		link.download = `Solar pannels power generation - from ${from} to ${to}.csv`
+		link.click()
+		URL.revokeObjectURL(link.href)
 	},
-	getChartDataChunk(endPoint, storageProvider, names, locations, miners, racks, functions, from, to, offset, limit) {
+	async getGridEnergyConsumption() {
+		const sources = 'Power grid plug'
+		const locatTZOffset = new Date().getTimezoneOffset()
+		const from = moment(this.dates[0]).add((-1) * locatTZOffset, 'minutes').add((-1) * this.storageProviterTimeZoneOffset, 'minutes').toISOString()
+		const to = moment(this.dates[1]).add((-1) * locatTZOffset, 'minutes').add((-1) * this.storageProviterTimeZoneOffset, 'minutes').toISOString()
+
+		this.$emit('loading', true)
+
+		const gridEnergyConsumption = await this.getData('energy', this.storageProvider, sources, null, null, null, null, from, to)
+
+		const gridEnergyConsumptionHeader = ['"Name"', '"Time"', '"Energy [Wh]"']
+		const gridEnergyConsumptionColumnTypes = ["string", "string", "number"]
+
+		let result = gridEnergyConsumptionHeader.join(",") + "\r\n" +
+			Papa.unparse(gridEnergyConsumption.map((spp) => {return [spp.Name, spp.Time, spp.Energy]}), {
+				quotes: gridEnergyConsumptionColumnTypes.map((ct) => {return ct != 'number'}),
+				quoteChar: '"',
+				escapeChar: '"',
+				delimiter: ",",
+				header: false,
+				newline: "\r\n",
+				skipEmptyLines: false,
+				columns: null
+			})
+
+		this.$emit('loading', false)
+
+		const blob = new Blob([result], { type: 'text/csv' })
+		const link = document.createElement('a')
+		link.href = URL.createObjectURL(blob)
+		link.download = `Grid energy consumption - from ${from} to ${to}.csv`
+		link.click()
+		URL.revokeObjectURL(link.href)
+	},
+	getDataChunk(endPoint, storageProvider, names, locations, miners, racks, functions, from, to, offset, limit) {
 		if(endPoint == undefined || storageProvider == undefined || from == undefined || to == undefined)
 			return
 		if(names == undefined)
@@ -94,7 +137,7 @@ const methods = {
 			method: 'get'
 		})
 	},
-	async getChartData(endPoint, storageProvider, names, locations, miners, racks, functions, from, to) {
+	async getData(endPoint, storageProvider, names, locations, miners, racks, functions, from, to) {
 		if(endPoint == undefined || storageProvider == undefined || from == undefined || to == undefined)
 			return
 
@@ -114,12 +157,12 @@ const methods = {
 		let chunkData = []
 		let br = false
 		do {
-			const chunk = await this.getChartDataChunk(endPoint, storageProvider, names, locations, miners,
+			const chunk = await this.getDataChunk(endPoint, storageProvider, names, locations, miners,
 				racks, functions, from, to, offset, this.maxResults)
 			offset += this.maxResults
 			chunkData = chunk.data
 			data = data.concat(chunkData)
-			br = offset > chunkData.length
+			br = this.maxResults > chunkData.length
 		} while (chunkData.length && !br)
 
 		return data
@@ -132,8 +175,6 @@ const methods = {
 			this.dates = back
 			return
 		}
-
-		await this.getPowerGenerationEnergyConsumptionData()
 	}
 }
 
@@ -142,7 +183,8 @@ const destroyed = function() {
 
 export default {
 	props: [
-		'storageProvider'
+		'storageProvider',
+		'storageProviterTimeZoneOffset'
 	],
 	mixins: [
 		language,
@@ -157,7 +199,7 @@ export default {
 	name: 'Exporter',
 	data () {
 		return {
-			maxResults: 1000000,
+			maxResults: 1000,
 			exporter: {},
 			dates: [],
 			history: 7

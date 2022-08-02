@@ -1,29 +1,40 @@
 @import "~@/node_modules/@vuepic/vue-datepicker/dist/main.css";
+@import "primevue/resources/themes/saga-blue/theme.css";
+@import "primevue/resources/primevue.min.css";
+@import "primeicons/primeicons.css";
 
 .common-exporter {
 
 	.header {
 		position: relative;
 		display: flex;
-		flex-direction: row;
-		flex-wrap: wrap;
-		justify-content: space-between;
+		flex-direction: column;
+		flex-wrap: nowrap;
+		justify-content: flex-start;
 
-		margin: 1rem 0;
+		margin: .5rem 0;
 		
-		.btn {
-			order: 0;
+		.row {
+			margin: .5rem 0 0 0;
+
+			position: relative;
+			display: flex;
+			flex-direction: row;
+			flex-wrap: nowrap;
+			justify-content: flex-start;
+	
+			.txt {
+				min-width: 14.7rem;
+			}
+
+			.btn {
+			}
 		}
 		.calendar {
-			order: 1;
+			order: 0;
 			flex-grow: 1;
 			max-width: 22rem;
 		}
-	}
-
-	.graphs-container {
-		min-height: 450px;
-		margin: 1rem;
 	}
 
 	@media (max-width: 1024px) {

@@ -52,7 +52,7 @@ const methods = {
 		})
 	},
 	selectStorageProvider(id) {
-		this.$emit('storage-provider-changed', id)
+		this.$emit('storage-provider-changed', {"id": id, "tzOffset": 120})
 	}
 }
 
