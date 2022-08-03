@@ -1,12 +1,15 @@
 import language from '@/src/mixins/i18n/language.js'
 import api from '@/src/mixins/api/api.js'
 
+import HorizontalDivider from '@/src/components/helpers/HorizontalDivider.vue'
+
 import axios from 'axios'
 import moment from 'moment'
 import Papa from 'papaparse'
 
 import Datepicker from '@vuepic/vue-datepicker'
 import Button from 'primevue/button'
+import MultiSelect from 'primevue/multiselect'
 
 const created = function() {
 	const that = this
@@ -31,6 +34,15 @@ const computed = {
 }
 
 const watch = {
+	async storageProvider(state, before) {
+		this.spaces = (await this.getSpaces(state)).data
+			.filter((s) => {return s.Space != 'Data center installation'})
+		for await(const space of this.spaces) {
+			this.hardware[space.Space] = (await this.getSpaceHardware(state, space.Space)).data
+		}
+
+		this.extractMiners()
+	}
 }
 
 const mounted = async function() {
@@ -175,6 +187,115 @@ const methods = {
 			this.dates = back
 			return
 		}
+	},
+	getSpaces(storageProvider) {
+		if(storageProvider == undefined)
+			return
+		const self = this,
+			getUri = this.apiProtocol + this.apiHost + ':' +
+				this.apiAuthServerPort + this.apiPath + '/list-spaces?storage_provider_id=' +
+					storageProvider
+		return axios(getUri, {
+			method: 'get'
+		})
+	},
+	getSpaceHardware(storageProvider, space) {
+		if(storageProvider == undefined || space == undefined)
+			return
+		const self = this,
+			getUri = this.apiProtocol + this.apiHost + ':' +
+				this.apiAuthServerPort + this.apiPath + '/list-space-hardware?storage_provider_id=' +
+					storageProvider + '&space=' + space
+		return axios(getUri, {
+			method: 'get'
+		})
+	},
+	extractMiners() {
+		this.miners.length = 0
+		const hardware = Object.keys(this.hardware)
+		for (const hw of hardware) {
+			for (const rackhw of this.hardware[hw]) {
+				if(this.miners.indexOf(rackhw.MinerId) == -1 && rackhw.MinerId.indexOf('f') == 0)
+					this.miners.push(rackhw.MinerId)
+			}
+		}
+
+		this.selectedMiners = this.miners.map((m) => m)
+		this.minersListReady = true
+	},
+	filecoinEnergyModelData(miner, dataType, start, end, filter) {
+		if(miner == undefined || dataType == undefined || start == undefined || end == undefined)
+			return null
+		const getUri = 'https://api.filecoin.energy:443/models/model?code_name=' + dataType +
+			'&miner=' + miner +
+			'&start=' + start +
+			'&end=' + end +
+			'&filter=' + ((filter != undefined) ? filter : 'day')
+		return axios(getUri, {
+			method: 'get'
+		})
+	},
+	async dataFromModel(dataType, start, end, miner, filter){
+		let dataPoints = []
+		let merr = true
+		while(merr) {
+			try {
+				dataPoints = (await this.filecoinEnergyModelData(miner, dataType, start, end, filter)).data.data
+				merr = null
+			} catch (error) {
+				merr = error
+			}
+		}
+	
+		return dataPoints
+	},
+	async minersDataFromModel(model, title) {
+		this.$emit('loading', true)
+
+		const locatTZOffset = new Date().getTimezoneOffset()
+		const from = moment(this.dates[0]).add((-1) * locatTZOffset, 'minutes').add((-1) * this.storageProviterTimeZoneOffset, 'minutes').format('YYYY-MM-DD')
+		const to = moment(this.dates[1]).add((-1) * locatTZOffset, 'minutes').add((-1) * this.storageProviterTimeZoneOffset, 'minutes').format('YYYY-MM-DD')
+
+		let data = []
+
+		for await(const miner of this.selectedMiners) {
+			const response = (await this.dataFromModel(model, from, to, miner, 'day'))
+			const lower = response[0]
+			const estimate = response[1]
+			const upper = response[2]
+
+			for (let index = 0; index < lower.data.length; index++) {
+				const lowerDataItem = lower.data[index]
+				const estimateDataItem = estimate.data[index]
+				const upperDataItem = upper.data[index]
+
+				data.push([miner, lower.title, lowerDataItem.value, estimate.title, estimateDataItem.value, upper.title, upperDataItem.value, lowerDataItem.start_date, lowerDataItem.end_date])
+			}
+		}
+
+		const dataHeader = ['"Storage provider"', '"Bound/Estimate"', '"Energy [kWh]"', '"Bound/Estimate"', '"Energy [kWh]"', '"Bound/Estimate"', '"Energy [kWh]"', '"Start date"', '"End date"']
+		const dataColumnTypes = ["string", "string", "number", "string", "number", "string", "number", "string", "string"]
+
+		let result = dataHeader.join(",") + "\r\n" +
+			Papa.unparse(data, {
+				quotes: dataColumnTypes.map((ct) => {return ct != 'number'}),
+				quoteChar: '"',
+				escapeChar: '"',
+				delimiter: ",",
+				header: false,
+				newline: "\r\n",
+				skipEmptyLines: false,
+				columns: null
+			})
+
+		this.$emit('loading', false)
+
+		const blob = new Blob([result], { type: 'text/csv' })
+		const link = document.createElement('a')
+		link.href = URL.createObjectURL(blob)
+		link.download = `${title} - Storage Providers ${this.selectedMiners.join(" ")} - from ${from} to ${to}.csv`
+		link.click()
+		URL.revokeObjectURL(link.href)
 	}
 }
 
@@ -191,8 +312,10 @@ export default {
 		api
 	],
 	components: {
+		HorizontalDivider,
 		Datepicker,
-		Button
+		Button,
+		MultiSelect
 	},
 	directives: {
 	},
@@ -202,7 +325,11 @@ export default {
 			maxResults: 1000,
 			exporter: {},
 			dates: [],
-			history: 7
+			history: 7,
+			hardware: {},
+			miners: [],
+			selectedMiners: [],
+			minersListReady: false
 		}
 	},
 	created: created,

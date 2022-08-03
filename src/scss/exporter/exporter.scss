@@ -29,6 +29,14 @@
 
 			.btn {
 			}
+
+			&.align-width {
+				max-width: 22rem;
+
+				.p-multiselect {
+					max-width: 100%;
+				}
+			}
 		}
 		.calendar {
 			order: 0;
