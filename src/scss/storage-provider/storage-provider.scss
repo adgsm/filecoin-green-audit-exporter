@@ -5,8 +5,9 @@
 	flex-wrap: nowrap;
 	justify-content: flex-start;
 	
+	
 	.storage-provider-icon {
-		margin: .5rem;
+		margin: 2rem;
 		width: 5rem;
 		height: 5rem;
 		border: 2px solid #ddd;
@@ -16,10 +17,12 @@
 		background-size: contain;
 		background-repeat: no-repeat;
 		background-position: right bottom;
+		
 
 		&:hover,
 		&.active {
-			border-color: #555;
+			border-color: rgb(199, 190, 190);
+	
 		}
 
 		&:hover .storage-provider-name {
@@ -39,6 +42,7 @@
 			overflow: hidden;
 			text-overflow: ellipsis;
 			max-width: 100%;
+			
 
 			&:hover {
 				transform: translateY(-.35rem);

@@ -4,7 +4,7 @@
 	flex-direction: row;
 	flex-wrap: nowrap;
 	justify-content: center;
-
+	
 	text-align: center;
 
 	.attributions {
@@ -15,11 +15,12 @@
 		justify-content: center;
 		align-items: center;
 
-		color: #ddd;
+		color: rgb(0, 0, 0);
 		font-size: .75rem;
 
 		a {
-			color: #ccc;
+			color: rgb(0, 0, 0);
+			padding: 0.25rem;
 		}
 	}
 
