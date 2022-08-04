@@ -269,12 +269,12 @@ const methods = {
 				const estimateDataItem = estimate.data[index]
 				const upperDataItem = upper.data[index]
 
-				data.push([miner, lower.title, lowerDataItem.value, estimate.title, estimateDataItem.value, upper.title, upperDataItem.value, lowerDataItem.start_date, lowerDataItem.end_date])
+				data.push([miner, lowerDataItem.value, estimateDataItem.value, upperDataItem.value, lowerDataItem.start_date, lowerDataItem.end_date])
 			}
 		}
 
-		const dataHeader = ['"Storage provider"', '"Bound/Estimate"', '"Energy [kWh]"', '"Bound/Estimate"', '"Energy [kWh]"', '"Bound/Estimate"', '"Energy [kWh]"', '"Start date"', '"End date"']
-		const dataColumnTypes = ["string", "string", "number", "string", "number", "string", "number", "string", "string"]
+		const dataHeader = ['"Storage provider"', '"Lower bound [kWh]"', '"Estimate [kWh]"', '"Upper bound [kWh]"', '"Start date"', '"End date"']
+		const dataColumnTypes = ["string", "number", "number", "number", "string", "string"]
 
 		let result = dataHeader.join(",") + "\r\n" +
 			Papa.unparse(data, {
